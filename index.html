@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nintendo Switch 2 Architecture Report</title>
+    <style>
+      /* CSS STYLING */
+      :root {
+        --primary: #e60012; /* Nintendo Red */
+        --dark: #0a0a0a;
+        --gray: #1f1f1f;
+        --text: #ffffff;
+        --accent: #00d2ff; /* Neon Blue */
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: var(--dark);
+        color: var(--text);
+        overflow: hidden;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* BACKGROUND EFFECT - Futuristic Grid */
+      .background-fx {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+            rgba(255, 255, 255, 0.03) 1px,
+            transparent 1px
+          ),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 50px 50px;
+        background-color: var(--dark);
+        z-index: -1;
+      }
+
+      /* SLIDE CONTAINER */
+      .slides-container {
+        flex: 1;
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
+
+      .slide {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.6s ease-in-out, transform 0.6s ease;
+        transform: scale(0.98);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 40px;
+        box-sizing: border-box;
+      }
+
+      .slide.active {
+        opacity: 1;
+        visibility: visible;
+        transform: scale(1);
+        z-index: 2;
+      }
+
+      /* TYPOGRAPHY */
+      h1 {
+        font-size: 3rem;
+        margin: 0 0 10px 0;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: var(--primary);
+        text-shadow: 0 0 15px rgba(230, 0, 18, 0.6);
+        line-height: 1.1;
+      }
+
+      h2 {
+        font-size: 2.2rem;
+        color: var(--text);
+        margin-bottom: 20px;
+        border-bottom: 2px solid var(--primary);
+        display: inline-block;
+        padding-bottom: 5px;
+      }
+
+      h3 {
+        color: var(--accent);
+        margin: 10px 0;
+      }
+
+      .subtitle {
+        font-size: 1.5rem;
+        color: #aaa;
+        margin-bottom: 30px;
+        font-weight: 300;
+      }
+
+      p,
+      li {
+        font-size: 1.1rem;
+        line-height: 1.6;
+        color: #ddd;
+      }
+
+      /* TITLE SLIDE LAYOUT (Split Screen) */
+      .title-slide-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* Split 50/50 */
+        gap: 40px;
+        width: 100%;
+        max-width: 1400px;
+        align-items: center;
+      }
+
+      .title-text {
+        text-align: left;
+      }
+
+      .member-list {
+        margin-top: 30px;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 20px;
+        border-left: 4px solid var(--accent);
+        border-radius: 0 10px 10px 0;
+      }
+
+      .member-list p {
+        margin: 5px 0;
+        font-size: 1rem;
+        color: #ccc;
+      }
+      .member-list strong {
+        color: #fff;
+      }
+
+      /* 3D MODEL WRAPPER */
+      .sketchfab-embed-wrapper {
+        width: 100%;
+        height: 500px;
+        border: 1px solid #333;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 0 30px rgba(0, 210, 255, 0.1);
+      }
+
+      iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+      }
+
+      /* TABLES */
+      .comparison-table {
+        width: 90%;
+        margin-top: 20px;
+        border-collapse: collapse;
+        background: #1a1a1a;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      }
+      .comparison-table th {
+        background: var(--primary);
+        color: white;
+        padding: 15px;
+      }
+      .comparison-table td {
+        padding: 12px;
+        border-bottom: 1px solid #333;
+        text-align: center;
+      }
+
+      /* CONTROLS */
+      .controls {
+        position: absolute;
+        bottom: 30px;
+        right: 40px;
+        z-index: 10;
+      }
+      button {
+        background: #333;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        cursor: pointer;
+        border-radius: 5px;
+        font-size: 1rem;
+        transition: 0.3s;
+      }
+      button:hover {
+        background: var(--primary);
+      }
+      .progress-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 4px;
+        background: var(--primary);
+        width: 0%;
+        transition: width 0.3s;
+      }
+      .comparison-table {
+        width: 90%;
+        margin-top: 20px;
+        border-collapse: collapse;
+        background: #1a1a1a;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      }
+      .comparison-table th {
+        background: var(--primary);
+        color: white;
+        padding: 15px;
+      }
+      .comparison-table td {
+        padding: 12px;
+        border-bottom: 1px solid #333;
+        text-align: center;
+      }
+
+      /* HIGHLIGHTED CELLS FOR SLIDE 8 TABLE */
+      .highlight-best {
+        background: #14532d; /* deep green */
+        color: #bbf7d0; /* light green text */
+        font-weight: 600;
+      }
+
+      .highlight-cost {
+        background: #854d0e; /* brown/yellow tone */
+        color: #fef3c7;
+        font-weight: 600;
+      }
+      .page-number {
+        position: absolute;
+        bottom: 30px;
+        left: 40px;
+        color: #666;
+        font-family: monospace;
+      }
+
+      /* IMAGES */
+      .slide-img {
+        max-width: 600px;
+        border-radius: 8px;
+        border: 1px solid #444;
+      }
+      .slide-imgbro {
+        max-width: 250px;
+      }
+
+      /* NEW: TEAM SLIDE STYLING */
+      .team-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 40px;
+        max-width: 1100px;
+        margin-top: 20px;
+      }
+
+      .team-card {
+        text-align: center;
+      }
+
+      .avatar-circle {
+        width: 160px;
+        height: 160px;
+        border-radius: 50%;
+        border: 3px solid var(--accent);
+        padding: 4px;
+        background: radial-gradient(
+          circle at 30% 20%,
+          rgba(0, 210, 255, 0.25),
+          transparent 60%
+        );
+        box-shadow: 0 0 25px rgba(0, 210, 255, 0.25);
+        overflow: hidden;
+        margin: 0 auto;
+      }
+
+      .avatar-circle img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+      }
+
+      .team-name {
+        margin-top: 14px;
+        font-weight: 600;
+        font-size: 1.3rem;
+      }
+
+      .team-id {
+        margin-top: 4px;
+        font-size: 1.5rem;
+        color: #aaa;
+      }
+
+      .logo-img {
+        height: 60px;
+        margin-bottom: 16px;
+      }
+
+      .course-line {
+        font-size: 1rem;
+        color: #ccc;
+        margin-top: 4px;
+        margin-bottom: 20px;
+      }
+
+      .group-members-heading {
+        font-size: 1.5rem;
+        color: var(--text);
+        text-decoration: underline;
+        text-decoration-color: var(--accent);
+        text-decoration-thickness: 2px;
+        text-underline-offset: 8px;
+        margin-bottom: 30px;
+        font-weight: 600;
+        letter-spacing: 1px;
+      }
+
+      .top-right-logo {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        height: 70px;
+        z-index: 5;
+      }
+
+      @media (max-width: 900px) {
+        .team-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .title-slide-content {
+          grid-template-columns: 1fr;
+        }
+        .sketchfab-embed-wrapper {
+          height: 320px;
+        }
+      }
+
+      @media (max-width: 600px) {
+        .team-grid {
+          grid-template-columns: 1fr;
+        }
+        .slide {
+          padding: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="background-fx"></div>
+
+    <div class="slides-container">
+      <div class="slide active">
+        <img
+          src="images/uthm-logo.png"
+          alt="UTHM Logo"
+          class="logo-img-large"
+        />
+        <p class="course-line"><strong>BIK10303 – Computer Architecture</strong></p>
+        <p class="group-members-heading">Group Members</p>
+        <div class="team-grid">
+          <!-- Replace image paths with your real photos -->
+          <div class="team-card">
+            <div class="avatar-circle">
+              <img src="images/jowel.jpg" alt="MD Jowel" />
+            </div>
+            <p class="team-name">MD JOWEL</p>
+            <p class="team-id">AI250004</p>
+          </div>
+
+          <div class="team-card">
+            <div class="avatar-circle">
+              <img src="images/ahmed.jpg" alt="Ahmed Nashwan" />
+            </div>
+            <p class="team-name">AHMED NASHWAN AHMED<br />AL-MASWARY</p>
+            <p class="team-id">AI250001</p>
+          </div>
+
+          <div class="team-card">
+            <div class="avatar-circle">
+              <img src="images/dipto.jpg" alt="Dipto Howlader" />
+            </div>
+            <p class="team-name">DIPTO HOWLADER</p>
+            <p class="team-id">AI250002</p>
+          </div>
+
+          <div class="team-card">
+            <div class="avatar-circle">
+              <img src="images/anas.jpg" alt="Anas Awsan" />
+            </div>
+            <p class="team-name">ANAS AWSAN ABDULRAZZAQ<br />MUSAED SALLAM</p>
+            <p class="team-id">AI250036</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 2: ABSTRACT -->
+      <div class="slide">
+        <img src="images/uthm-logo.png" alt="UTHM Logo" class="top-right-logo" />
+        <h2>Abstract</h2>
+        <div style="text-align: left; max-width: 1000px;">
+          <p>The Nintendo Switch 2, released in 2025, is a hybrid gaming console that combines handheld portability with docked performance. While it introduces upgraded hardware such as an ARM‑based NVIDIA CPU, integrated GPU, and DDR5 memory, the device faces a significant issue: overheating during handheld gameplay. Users report excessive heat, fan noise, and game crashes, and Nintendo has officially warned against use above 35°C.
+          </br></br>This project analyzes the Switch 2 architecture — including CPU, GPU, memory, storage, and I/O modules — to identify the root causes of thermal inefficiency. A conceptual enhanced design is proposed, featuring vapor chamber cooling, liquid microchannels, adaptive fan control, and IoT‑based temperature monitoring. The redesigned “Switch 2 Pro” balances performance and cost, offering improved reliability and user experience while demonstrating how Computer Architecture principles can address real‑world device challenges.</p>
+        </div>
+      </div>
+
+      <!-- SLIDE 3: INTRODUCTION -->
+      <div class="slide">
+        <img src="images/uthm-logo.png" alt="UTHM Logo" class="top-right-logo" />
+        <h2>Introduction</h2>
+        <div style="text-align: left; max-width: 1050px;">
+          <p>The <strong>Nintendo Switch 2, released in 2025,</strong> is a hybrid gaming console that combines handheld portability with docked performance. It features a custom ARM‑based NVIDIA CPU, integrated GPU, DDR5 memory, and modular Joy‑Con controllers. While these upgrades improve graphics and usability, the device suffers from <strong>overheating in handheld mode,</strong> which impacts comfort, performance stability, and long‑term reliability.</p>
+          
+          <h3 style="margin-top: 25px; margin-bottom: 15px;">Device Technology & Design:</h3>
+          <ul style="margin-bottom: 15px;">
+            <li><strong>CPU:</strong> ARM-based custom NVIDIA processor with multiple cores</li>
+            <li><strong>GPU:</strong> Integrated graphics unit for dynamic rendering</li>
+            <li><strong>Memory:</strong> DDR5 RAM + multi-level cache hierarchy</li>
+            <li><strong>I/O:</strong> Modular Joy-Con controllers, Bluetooth 5.2, Wi-Fi 6, USB-C</li>
+            <li><strong>Hybrid design:</strong> portable handheld mode + docked console for TV gaming</li>
+          </ul>
+
+          <h3 style="margin-top: 25px; margin-bottom: 15px;">The Problem:</h3>
+          <ul style="margin-bottom: 15px;">
+            <li>Overheating reduces user comfort and device reliability</li>
+            <li>Performance throttling during intensive gameplay</li>
+            <li>Risk of permanent hardware damage</li>
+          </ul>
+
+          <h3 style="margin-top: 25px; margin-bottom: 15px;">Project Aim:</h3>
+          <p>Analyze the heating issue and propose a conceptual redesign with improved cooling and workload management, demonstrating how Computer Architecture principles solve real‑world device challenges.</p>
+        </div>
+      </div>
+
+      <!-- SLIDE 4: ARCHITECTURE OVERVIEW -->
+      <div class="slide">
+        <img src="images/uthm-logo.png" alt="UTHM Logo" class="top-right-logo" />
+        <h2>Architecture Overview</h2>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            max-width: 1200px;
+            align-items: center;
+          "
+        >
+          <div style="text-align: left;">
+            <p><strong>CPU:</strong> ARM-based custom NVIDIA processor with multiple cores.</p>
+            <p style="margin-top: 10px;"><strong>GPU:</strong> Integrated graphics unit supporting dynamic rendering and frame scaling.</p>
+            <p style="margin-top: 10px;"><strong>Memory:</strong> 8 GB DDR5 RAM + multi-level cache hierarchy (L1, L2, shared L3).</p>
+            <p style="margin-top: 10px;"><strong>Storage:</strong> 64–256 GB internal flash, expandable via microSDXC, NVMe SSD support in docked mode.</p>
+            <h3 style="margin-top: 20px; margin-bottom: 15px; color: var(--accent);">I/O Modules:</h3>
+            <ul>
+              <li>Joy-Con controllers</li>
+              <li>Bluetooth 5.2</li>
+              <li>Wi-Fi 6</li>
+              <li>HDMI, USB-C, audio jack</li>
+            </ul>
+            <p style="margin-top: 15px; color: #aaa; font-size: 0.95rem;"><em>Compact motherboard layout prioritizes portability but restricts airflow.</em></p>
+          </div>
+          <div style="display: flex; justify-content: center; align-items: center;">
+            <img src="images/00.jpg" alt="Motherboard" class="slide-img" />
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 5: IDENTIFIED ISSUE -->
+      <div class="slide">
+        <img src="images/uthm-logo.png" alt="UTHM Logo" class="top-right-logo" />
+        <h2>Identified Issue: Heating</h2>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            max-width: 1200px;
+            align-items: center;
+          "
+        >
+          <div style="text-align: left;">
+            <h3 style="color: #ff6b6b; margin-bottom: 15px;">Symptoms:</h3>
+            <ul>
+              <li>Console too hot to hold</li>
+              <li>Fans at max speed</li>
+              <li>Games crash during intensive play</li>
+            </ul>
+            <h3 style="color: #ff6b6b; margin-top: 20px; margin-bottom: 15px;">Nintendo Warning:</h3>
+            <ul>
+              <li>Avoid use above 35°C</li>
+              <li>Safe range: 5°C–35°C</li>
+            </ul>
+            <h3 style="color: #ff6b6b; margin-top: 20px; margin-bottom: 15px;">Causes:</h3>
+            <ul>
+              <li>High CPU/GPU workloads for modern AAA titles</li>
+              <li>Limited passive cooling in handheld mode</li>
+              <li>Restricted airflow due to compact design</li>
+            </ul>
+            <h3 style="color: #ff6b6b; margin-top: 20px; margin-bottom: 15px;">Impact:</h3>
+            <p>Usability discomfort, performance throttling, risk of permanent damage.</p>
+          </div>
+          <div style="display: flex; justify-content: center; align-items: center;">
+            <img src="images/01.png" alt="Thermal Map" class="slide-img" />
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 6: PROPOSED ENHANCED ARCHITECTURE -->
+      <div class="slide">
+        <img src="images/uthm-logo.png" alt="UTHM Logo" class="top-right-logo" />
+        <h2>Proposed Enhanced Architecture</h2>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            max-width: 1200px;
+            align-items: center;
+          "
+        >
+          <div style="text-align: left;">
+            <p><strong>Cooling system:</strong> vapor chamber + liquid microchannels for efficient heat dissipation.</p>
+            <p style="margin-top: 15px;"><strong>Workload management:</strong> dynamic CPU/GPU scheduling to reduce thermal spikes.</p>
+            <p style="margin-top: 15px;"><strong>Adaptive fan control:</strong> larger vents, smart airflow regulation based on sensor data.</p>
+            <p style="margin-top: 15px;"><strong>Heat-spreading materials:</strong> graphene layers, liquid metal TIM for better conductivity.</p>
+            <h3 style="margin-top: 20px; margin-bottom: 15px; color: var(--accent);">IoT Integration:</h3>
+            <ul>
+              <li>Temperature sensors for predictive cooling</li>
+              <li>NFC alerts when thermal thresholds are exceeded</li>
+            </ul>
+            <p style="margin-top: 15px; color: #90EE90;"><strong>Result:</strong> stable handheld performance, reduced overheating, improved reliability.</p>
+          </div>
+          <div style="display: flex; justify-content: center; align-items: center;">
+            <img src="images/redesigned_mohterboard.jpg" alt="Redesigned Motherboard" class="slide-img" />
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 7: COMMERCIALIZATION & PERFORMANCE VS COST -->
+      <div class="slide">
+        <img src="images/uthm-logo.png" alt="UTHM Logo" class="top-right-logo" />
+        <h2 style="margin-bottom: 30px;">Commercialization & Performance vs Cost</h2>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            max-width: 1200px;
+            align-items: flex-start;
+          "
+        >
+          <div style="text-align: left;">
+            <h3 style="color: var(--accent); margin-bottom: 15px;">Trade-offs:</h3>
+            <ul style="margin-bottom: 25px;">
+              <li><strong>Higher cost:</strong> Vapor chamber cooling and IoT sensors add extra materials and complexity, raising production costs.</li>
+              <li><strong>Improved reliability:</strong> Better cooling keeps CPU/GPU stable, prevents overheating, and extends hardware lifespan.</li>
+              <li><strong>Better user satisfaction:</strong> Stable handheld performance reduces heat discomfort and fan noise, making gameplay smoother and more enjoyable.</li>
+            </ul>
+            <h3 style="color: var(--accent); margin-bottom: 15px;">Commercialization angle:</h3>
+            <ul>
+              <li>"Switch 2 Pro" appeals to gamers who want handheld power without overheating</li>
+              <li>Balanced design ensures performance gains justify added cost</li>
+            </ul>
+          </div>
+          <div style="display: flex; justify-content: center; align-items: flex-start;">
+            <table class="comparison-table" style="width: 100%; margin: 0;">
+              <thead>
+                <tr>
+                  <th>Feature</th>
+                  <th>Switch 1</th>
+                  <th>Switch 2</th>
+                  <th>Switch 2 Pro</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>CPU/GPU</strong></td>
+                  <td>Tegra X1</td>
+                  <td>Custom NVIDIA</td>
+                  <td class="highlight-best">Optimized NVIDIA + scheduling</td>
+                </tr>
+                <tr>
+                  <td><strong>Memory</strong></td>
+                  <td>DDR4</td>
+                  <td>DDR5</td>
+                  <td class="highlight-best">DDR5X + cache tuning</td>
+                </tr>
+                <tr>
+                  <td><strong>Cooling</strong></td>
+                  <td>Basic fan</td>
+                  <td>Limited vents</td>
+                  <td class="highlight-best">Vapor chamber + microchannels + adaptive fan</td>
+                </tr>
+                <tr>
+                  <td><strong>Usability</strong></td>
+                  <td>Stable but low performance</td>
+                  <td>High performance but overheating</td>
+                  <td class="highlight-best">Stable + high performance</td>
+                </tr>
+                <tr>
+                  <td><strong>Cost</strong></td>
+                  <td>Low</td>
+                  <td>Moderate</td>
+                  <td class="highlight-cost">Higher but balanced</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 8: CONCLUSION -->
+      <div class="slide">
+        <img src="images/uthm-logo.png" alt="UTHM Logo" class="top-right-logo" />
+        <h2>Conclusion</h2>
+        <div style="max-width: 1000px; text-align: left;">
+          <p style="font-size: 1.15rem; margin-bottom: 20px;">
+            <strong>Heating is a real architectural issue</strong> in the Nintendo Switch 2.
+          </p>
+          <p style="font-size: 1.15rem; margin-bottom: 20px;">
+            <strong>Proposed enhanced design</strong> solves overheating with advanced cooling and smart workload management.
+          </p>
+          <h3 style="color: var(--accent); margin-top: 30px; margin-bottom: 15px;">The "Switch 2 Pro" concept offers:</h3>
+          <ul style="font-size: 1.1rem;">
+            <li>Better user experience</li>
+            <li>Improved reliability</li>
+            <li>Commercial viability through balanced performance vs cost</li>
+          </ul>
+          <p style="font-size: 1.1rem; margin-top: 20px; color: #90EE90;">
+            <strong>Demonstrates how Computer Architecture redesign can solve real-world device problems.</strong>
+          </p>
+        </div>
+      </div>
+
+      <!-- SLIDE 9: REFERENCES -->
+      <div class="slide">
+        <img src="images/uthm-logo.png" alt="UTHM Logo" class="top-right-logo" />
+        <h2>References</h2>
+        <ul style="font-size: 1rem; color: #bbb; text-align: left; max-width: 900px;">
+          <li style="margin-bottom: 15px;">
+            <strong>Nintendo Life (2025).</strong> Switch 2 overheating reports.
+          </li>
+          <li style="margin-bottom: 15px;">
+            <strong>Yahoo Tech (2025).</strong> Thermal performance analysis.
+          </li>
+          <li style="margin-bottom: 15px;">
+            <strong>Nintendo Reporters (2025).</strong> User feedback on Switch 2 heat issues.
+          </li>
+          <li>
+            <strong>Academic sources</strong> on vapor chamber cooling and IoT integration.
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="progress-bar" id="progress"></div>
+    <div class="page-number" id="page-num">1 / 10</div>
+
+    <div class="controls">
+      <button onclick="changeSlide(-1)">&#10094; Prev</button>
+      <button onclick="changeSlide(1)">Next &#10095;</button>
+    </div>
+
+    <script>
+      let currentSlide = 0;
+      const slides = document.querySelectorAll(".slide");
+      const progressBar = document.getElementById("progress");
+      const pageNum = document.getElementById("page-num");
+
+      function showSlide(index) {
+        if (index >= slides.length) currentSlide = 0;
+        if (index < 0) currentSlide = slides.length - 1;
+
+        slides.forEach((s) => s.classList.remove("active"));
+        slides[currentSlide].classList.add("active");
+
+        const pct = ((currentSlide + 1) / slides.length) * 100;
+        progressBar.style.width = pct + "%";
+        pageNum.innerText = `${currentSlide + 1} / ${slides.length}`;
+      }
+
+      function changeSlide(n) {
+        currentSlide += n;
+        showSlide(currentSlide);
+      }
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowRight") changeSlide(1);
+        if (e.key === "ArrowLeft") changeSlide(-1);
+      });
+
+      showSlide(0);
+    </script>
+  </body>
+</html>
